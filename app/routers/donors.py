@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import Optional
-from app import models, auth, schemas
+from app import models, auth, schemas, crud
 from app.database import get_db
 
 router = APIRouter(tags=["Donors"])
@@ -24,12 +24,7 @@ def get_donors(
     city: Optional[str] = None,
     db: Session = Depends(get_db)
 ):
-    query = db.query(models.Donor)
-    if blood_group:
-        query = query.filter(models.Donor.blood_group == blood_group)
-    if city:
-        query = query.filter(models.Donor.city == city)
-    return query.all()
+    return crud.get_donors(db, blood_group, city)
 
 @router.get("/donors/match/{blood_group}")
 def match_donors(
@@ -58,7 +53,7 @@ def match_donors(
 
 @router.get("/donors/{id}")
 def get_donor(id: int, db: Session = Depends(get_db)):
-    donor = db.query(models.Donor).filter(models.Donor.id == id).first()
+    donor = crud.get_donor(db, id)
     if donor is None:
         raise HTTPException(status_code=404, detail="Donor not found")
     return donor
@@ -69,20 +64,7 @@ def register_donor(
     db: Session = Depends(get_db),
     current_user: str = Depends(auth.get_current_user)
 ):
-    new_donor = models.Donor(
-        name=donor.name,
-        blood_group=donor.blood_group,
-        city=donor.city,
-        state=donor.state,          # NEW
-        phone=donor.phone,
-        age=donor.age,
-        weight=donor.weight         # NEW
-    )
-    db.add(new_donor)
-    db.commit()
-    db.refresh(new_donor)
-    return new_donor
-
+    return crud.create_donor(db, donor)
 
 @router.put("/donors/{id}")
 def update_donor(
@@ -91,14 +73,13 @@ def update_donor(
     db: Session = Depends(get_db),
     current_user: str = Depends(auth.get_current_user)
 ):
-    db_donor = db.query(models.Donor).filter(models.Donor.id == id).first()
-    if db_donor is None:
+    if donor.is_available is None:
+        raise HTTPException(status_code=400, detail="No availability value provided")
+    
+    updated = crud.update_donor_availability(db, id, donor.is_available)
+    if updated is None:
         raise HTTPException(status_code=404, detail="Donor not found")
-    if donor.is_available is not None:
-        db_donor.is_available = donor.is_available
-    db.commit()
-    db.refresh(db_donor)
-    return db_donor
+    return updated
 
 @router.delete("/donors/{id}")
 def delete_donor(
@@ -106,9 +87,7 @@ def delete_donor(
     db: Session = Depends(get_db),
     current_user: str = Depends(auth.get_current_user)
 ):
-    donor = db.query(models.Donor).filter(models.Donor.id == id).first()
-    if donor is None:
+    deleted = crud.delete_donor(db, id)
+    if deleted is None:
         raise HTTPException(status_code=404, detail="Donor not found")
-    db.delete(donor)
-    db.commit()
     return {"message": f"Donor {id} deleted by {current_user}!"}
