@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app import models
 from app.database import engine
-from app.routers import auth, donors, hospitals, requests, donations, inventory, emergency
+from app.routers import auth, donors, hospitals, requests, donations, inventory, emergency, stats
 
 
 
@@ -33,6 +33,7 @@ app.include_router(requests.router)
 app.include_router(donations.router)
 app.include_router(inventory.router)
 app.include_router(emergency.router)
+app.include_router(stats.router)
 # Root endpoint
 @app.get("/")
 def home():
