@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
 from app import models, auth, schemas
 from app.database import get_db
+from typing import Optional
 
 router = APIRouter(tags=["Donations"])
 
@@ -63,3 +64,13 @@ def record_donation(
         "donated_at": today,
         "donor_total_donations": donor.total_donations
     }
+    
+@router.get("/donations")
+def get_donations(
+    donor_id: Optional[int] = None,
+    db: Session = Depends(get_db)
+):
+    query = db.query(models.Donation)
+    if donor_id:
+        query = query.filter(models.Donation.donor_id == donor_id)
+    return query.all()

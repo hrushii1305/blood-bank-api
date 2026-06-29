@@ -91,3 +91,18 @@ def delete_donor(
     if deleted is None:
         raise HTTPException(status_code=404, detail="Donor not found")
     return {"message": f"Donor {id} deleted by {current_user}!"}
+
+@router.put("/donors/{id}/toggle")
+def toggle_availability(
+    id: int,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(auth.get_current_user)
+):
+    donor = crud.get_donor(db, id)
+    if donor is None:
+        raise HTTPException(status_code=404, detail="Donor not found")
+    
+    donor.is_available = not donor.is_available
+    db.commit()
+    db.refresh(donor)
+    return {"message": f"Availability toggled to {donor.is_available}", "donor": donor}

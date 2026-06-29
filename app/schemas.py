@@ -77,3 +77,6 @@ class InventoryUpdate(BaseModel):
     hospital_id: int
     blood_group: str
     units: int
+    
+class RequestStatusUpdate(BaseModel):
+    status: str
