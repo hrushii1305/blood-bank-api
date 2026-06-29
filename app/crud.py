@@ -7,13 +7,19 @@ from app import models, schemas
 def get_donor(db: Session, donor_id: int):
     return db.query(models.Donor).filter(models.Donor.id == donor_id).first()
 
-def get_donors(db: Session, blood_group: Optional[str] = None, city: Optional[str] = None):
+def get_donors(
+    db: Session,
+    blood_group: Optional[str] = None,
+    city: Optional[str] = None,
+    skip: int = 0,
+    limit: int = 10
+):
     query = db.query(models.Donor)
     if blood_group:
         query = query.filter(models.Donor.blood_group == blood_group)
     if city:
         query = query.filter(models.Donor.city == city)
-    return query.all()
+    return query.offset(skip).limit(limit).all()
 
 def create_donor(db: Session, donor: schemas.Donor):
     new_donor = models.Donor(
@@ -44,3 +50,4 @@ def delete_donor(db: Session, donor_id: int):
         db.delete(donor)
         db.commit()
     return donor
+

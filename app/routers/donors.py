@@ -22,9 +22,11 @@ BLOOD_COMPATIBILITY = {
 def get_donors(
     blood_group: Optional[str] = None,
     city: Optional[str] = None,
+    skip: int = 0,
+    limit: int = 10,
     db: Session = Depends(get_db)
 ):
-    return crud.get_donors(db, blood_group, city)
+    return crud.get_donors(db, blood_group, city, skip, limit)
 
 @router.get("/donors/match/{blood_group}")
 def match_donors(

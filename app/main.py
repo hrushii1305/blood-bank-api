@@ -1,22 +1,28 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 from app import models
 from app.database import engine
 from app.routers import auth, donors, hospitals, requests, donations, inventory, emergency, stats
 
-
-
-# Create all database tables
 models.Base.metadata.create_all(bind=engine)
 
-# Initialize FastAPI app
+# Create rate limiter
+limiter = Limiter(key_func=get_remote_address)
+
 app = FastAPI(
     title="Blood Bank Management API",
     description="A REST API connecting blood donors with hospitals in need",
     version="1.0.0"
 )
 
-# CORS middleware
+# Attach limiter
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+# CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -25,7 +31,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Include all routers
+# Routers
 app.include_router(auth.router)
 app.include_router(donors.router)
 app.include_router(hospitals.router)
@@ -34,7 +40,8 @@ app.include_router(donations.router)
 app.include_router(inventory.router)
 app.include_router(emergency.router)
 app.include_router(stats.router)
-# Root endpoint
+
 @app.get("/")
 def home():
     return {"message": "Blood Bank API 🩸"}
+
