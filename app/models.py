@@ -15,6 +15,7 @@ class Donor(Base):
     is_available = Column(Boolean, default=True)
     last_donated = Column(String, default=None)      # NEW
     total_donations = Column(Integer, default=0)     # NEW
+    registered_date = Column(String, default=None) 
     
     
 class User(Base):
