@@ -3,6 +3,11 @@ from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from app import models, auth, schemas
 from app.database import get_db
+from fastapi import Request
+from slowapi import Limiter
+from slowapi.util import get_remote_address
+
+limiter = Limiter(key_func=get_remote_address)
 
 router = APIRouter(tags=["Authentication"])
 
@@ -22,7 +27,8 @@ def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
     return {"message": f"User {user.username} registered!"}
 
 @router.post("/login")
-def login(user: schemas.UserLogin, db: Session = Depends(get_db)):
+@limiter.limit("5/minute")
+def login(request: Request, user: schemas.UserLogin, db: Session = Depends(get_db)):
     db_user = db.query(models.User).filter(
         models.User.username == user.username
     ).first()
@@ -33,6 +39,7 @@ def login(user: schemas.UserLogin, db: Session = Depends(get_db)):
     
     token = auth.create_token(db_user.username)
     return {"access_token": token, "token_type": "bearer"}
+
 
 @router.post("/token")
 def login_for_token(

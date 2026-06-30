@@ -3,43 +3,38 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 from app import models
 from app.database import get_db
+from app import cache
+
 
 router = APIRouter(tags=["Statistics"])
 
 @router.get("/stats")
 def get_statistics(db: Session = Depends(get_db)):
-    # Total donors
-    total_donors = db.query(models.Donor).count()
+    # Try cache first!
+    cached = cache.get_cache("stats")
+    if cached:
+        return {**cached, "source": "cache"}  # mark it came from cache
     
-    # Available donors
+    # Not cached - run queries
+    total_donors = db.query(models.Donor).count()
     available_donors = db.query(models.Donor).filter(
         models.Donor.is_available == True
     ).count()
     
-    # Donors by blood group (GROUP BY!)
     blood_group_counts = db.query(
         models.Donor.blood_group,
         func.count(models.Donor.id)
     ).group_by(models.Donor.blood_group).all()
-    
-    # Convert to dictionary
     donors_by_blood_group = {bg: count for bg, count in blood_group_counts}
     
-    # Total hospitals
     total_hospitals = db.query(models.Hospital).count()
-    
-    # Total requests
     total_requests = db.query(models.BloodRequest).count()
-    
-    # Critical requests
     critical_requests = db.query(models.BloodRequest).filter(
         models.BloodRequest.urgency == "critical"
     ).count()
-    
-    # Total donations
     total_donations = db.query(models.Donation).count()
     
-    return {
+    result = {
         "total_donors": total_donors,
         "available_donors": available_donors,
         "donors_by_blood_group": donors_by_blood_group,
@@ -48,6 +43,11 @@ def get_statistics(db: Session = Depends(get_db)):
         "critical_requests": critical_requests,
         "total_donations": total_donations
     }
+    
+    # Store in cache for next time!
+    cache.set_cache("stats", result, expire_seconds=60)
+    
+    return {**result, "source": "database"}
     
 @router.get("/stats/city")
 def stats_by_city(db: Session = Depends(get_db)):
@@ -78,3 +78,5 @@ def stats_for_blood_group(blood_group: str, db: Session = Depends(get_db)):
         "total_donors": total,
         "available_donors": available
     }
+    
+
