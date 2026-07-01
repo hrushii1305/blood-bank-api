@@ -1,12 +1,11 @@
 import redis
 import json
+import os
 
-redis_client = redis.Redis(
-    host="localhost",
-    port=6379,
-    db=0,
-    decode_responses=True
-)
+# Connect to Redis (Railway provides REDIS_URL)
+REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379")
+
+redis_client = redis.from_url(REDIS_URL, decode_responses=True)
 
 def get_cache(key: str):
     try:
